@@ -23,8 +23,11 @@ from kivymd.uix.screen import Screen
 from kivy.factory import Factory
 from kivymd.uix.navigationdrawer.navigationdrawer import MDNavigationLayout
 from kivy.utils import platform
+from kivymd.uix.list.list import OneLineAvatarListItem
+from kivymd.uix.label import MDLabel
 # from kivy.core.window import EventLoop
 from kivy.core.clipboard import Clipboard
+from kivy.core.audio import SoundLoader
 
 ssl._create_default_https_context = ssl.SSLContext
 
@@ -115,8 +118,51 @@ Builder.load_string("""
 
 
 <NavigationDrawerItem@MDNavigationDrawerItem>:
+    on_release: self.parent.parent.parent.set_state('close')
     icon_color: app.theme_cls.primary_light
     text_color: app.theme_cls.opposite_bg_light if app.theme_cls.theme_style == "Light" else app.theme_cls.opposite_bg_dark
+
+
+<MyNavigationDrawerItem@MDNavigationDrawer>:
+    MDNavigationDrawerMenu:
+        radius: (0, 16, 16, 0)
+        MDNavigationDrawerHeader:
+            title: "Youtube"
+            text: "Video downloader"
+            spacing: "4dp"
+            padding: "12dp" , 0, 0, "56dp"
+        MDNavigationDrawerLabel:
+            text: "Downloaded items"
+        NavigationDrawerItem:
+            icon: "video"
+            text: "Videos"
+            on_release: app.showcase('movies')
+        NavigationDrawerItem:
+            icon: "music"
+            text: "Music"
+            # on_release: app.goto_videos()
+            on_release: app.showcase("music")
+
+        MDNavigationDrawerDivider:
+        NavigationDrawerItem:
+            icon: "hand-heart"
+            text: "Support developer"
+        NavigationDrawerItem:
+            icon: "send"
+            text: "Send feedback"
+
+        MDNavigationDrawerDivider:
+        MDNavigationDrawerLabel:
+            text: 'Other'
+        NavigationDrawerItem:
+            icon: 'alert'
+            text: 'Error Log'
+            on_release: app.showcase('error log')
+        
+        # MDNavigationDrawerDivider:
+        NavigationDrawerItem:
+            icon: 'help-circle'
+            text: 'Help'
 
 
 <HomeToolBar>:
@@ -130,45 +176,12 @@ Builder.load_string("""
                 pos_hint: {"top": 1}
                 left_action_items: [["menu", lambda x: nav_bar.set_state("open")]]
 
-    MDNavigationDrawer:
+    MyNavigationDrawerItem:
         id: nav_bar
-        radius: (0, 16, 16, 0)
-        # elevation: 3
-        MDNavigationDrawerMenu:
-            MDNavigationDrawerHeader:
-                title: "Youtube"
-                text: "Video downloader"
-                spacing: "4dp"
-                padding: "12dp" , 0, 0, "56dp"
-            # NavigationDrawerItem:
-            #     icon: 'home'
-            #     text: 'Home'
-            # MDNavigationDrawerDivider:
-            MDNavigationDrawerLabel:
-                text: "Downloaded items"
-            NavigationDrawerItem:
-                icon: "video"
-                text: "Videos"
-                on_release: app.goto_videos()
-            NavigationDrawerItem:
-                icon: "music"
-                text: "Music"
-
-            MDNavigationDrawerDivider:
-            NavigationDrawerItem:
-                icon: "hand-heart"
-                text: "Support developer"
-            NavigationDrawerItem:
-                icon: "send"
-                text: "Send feedback"
-
-            MDNavigationDrawerDivider:
-            NavigationDrawerItem:
-                icon: 'help-circle'
-                text: 'Help'
 
 
-<ToolBar@MDNavigationLayout>:
+
+<AllToolBar>:
     MDScreenManager:
         MDScreen:
             MDTopAppBar:
@@ -179,38 +192,8 @@ Builder.load_string("""
                 pos_hint: {"top": 1}
                 left_action_items: [["arrow-left", lambda x: app.back()], ["menu", lambda x: nav_bar.set_state("open")]]
 
-    MDNavigationDrawer:
+    MyNavigationDrawerItem:
         id: nav_bar
-        radius: (0, 16, 16, 0)
-        # elevation: 3
-        MDNavigationDrawerMenu:
-            MDNavigationDrawerHeader:
-                title: "Youtube"
-                text: "Video downloader"
-                spacing: "4dp"
-                padding: "12dp" , 0, 0, "56dp"
-            MDNavigationDrawerLabel:
-                text: "Downloaded items"
-            NavigationDrawerItem:
-                icon: "video"
-                text: "Videos"
-                on_release: app.goto_videos()
-            NavigationDrawerItem:
-                icon: "music"
-                text: "Music"
-
-            MDNavigationDrawerDivider:
-            NavigationDrawerItem:
-                icon: "hand-heart"
-                text: "Support developer"
-            NavigationDrawerItem:
-                icon: "send"
-                text: "Send feedback"
-
-            MDNavigationDrawerDivider:
-            NavigationDrawerItem:
-                icon: 'help-circle'
-                text: 'Help'
 
 
 <HomeScreen>:
@@ -260,8 +243,6 @@ Builder.load_string("""
             color: app.theme_cls.primary_color
             halign: 'center'
             pos_hint: {'center_x': 0.5, 'center_y': 0.4}
-        HomeToolBar:
-            id: toolbar
 #___________________________________ENDS_____________________________________
 
 
@@ -373,7 +354,7 @@ Builder.load_string("""
                     pos_hint: {"right": 0.95, "center_y": 0.5}
                     on_active: root.toggle_sys_theme()
 
-    ToolBar:
+    # AllToolBar:
 
 #______________________________Ends____________________________________
 
@@ -403,7 +384,7 @@ Builder.load_string("""
                 height: self.minimum_height
                 orientation: "vertical"
                 spacing: cm(1.5)
-    ToolBar:
+    # ToolBar:
 
 #_________________________________________Ends____________________________________________________
 
@@ -556,6 +537,7 @@ Builder.load_string("""
     size_hint_y: None
     height: self.texture_size[1]
     halign: 'center'
+
 <Disclaimer>:
     MDScreen:
         ScrollView:
@@ -622,6 +604,20 @@ Builder.load_string("""
                     #     on_release: root.reject()
 
 
+#_____________________________________________________ENDS__________________________________________________________
+<ShowCase>:
+    BoxLayout:
+        orientation: "vertical"
+        BoxLayout:
+            size_hint_y: None
+            height: '70dp'
+        ScrollView:
+            id: scroll_layout
+            BoxLayout:
+                id: container
+                size_hint_y: None
+                height: self.minimum_height
+                orientation: "vertical"
 
 """)
 
@@ -713,8 +709,12 @@ BoxLayout:
 """]
 
 data_engine = DataLoader()
+json_error = False
 try:
     data_engine.load()
+    if data_engine.data == {}:
+        json_error = True
+        raise FileNotFoundError
 except FileNotFoundError:
     import data_handler
 
@@ -722,7 +722,7 @@ except FileNotFoundError:
     data_engine.load()
 
 data_engine.cwd = os.getcwd()
-current_screen = "home"
+previous_screen = "home"
 
 last_esc_down = tap_start_time = time.time()
 tap_count = 0
@@ -742,7 +742,8 @@ random_text_home = ['Welcome to youtube video downloader',
                     'Got a greate idea for this app!!! discuss with developer let\'s make it happen',
                     'Turn on auto download option on customise screen, just copy the link and download',
                     'This app is not capable of merging audio and video hence some qualities may not available with '
-                    'audio']
+                    'audio',
+                    'Music play-back system coming soon...']
 
 auto_download = False
 is_permission_allowed = False
@@ -923,6 +924,8 @@ def maximised(*args):
 def hook_keyboard(_, key, *__):
     global last_esc_down
     if key == 27:
+        print('Esc button')
+        print(previous_screen)
         if sm.current in ('home', 'disclaimer'):
             if time.time() - last_esc_down < 2:
                 stop_app()
@@ -942,6 +945,9 @@ def hook_keyboard(_, key, *__):
             else:
                 app.toast('can\'t quit now please wait till download complete')
             return True
+        elif sm.current == 'showcase':
+            set_current_screen(previous_screen)
+            return True
     elif key == 13 and sm.current == 'home':
         home.search()
 
@@ -953,6 +959,9 @@ def set_current_screen(screen):
 
 
 def _set_screen(_):
+    global previous_screen
+    if previous_screen != current_screen:
+        previous_screen = sm.current
     sm.current = current_screen
 
 
@@ -969,12 +978,26 @@ def regex_match_link(clip):
     return False
 
 
+def list_items(mode):
+    if mode == "music":
+        return [i for i in os.listdir(f"./{mode}") if i.lower().endswith(('.mp3', '.wav', '.ogg'))]
+    elif mode == 'movies':
+        return [i for i in os.listdir(f'./{mode}') if i.lower().endswith(('.mp4', '.3gpp'))]
+    elif mode == 'error log':
+        tmp = [i for i in os.listdir(f'./{mode}') if i.lower().endswith('.txt') and re.search(r'\(\d\).txt', i)]
+        if not tmp:
+            return None
+        return tmp
+
+
 class HomeToolBar(MDNavigationLayout):
-    def change(self, for_home=False):
-        if for_home:
-            pass
-        else:
-            self.ids.app_
+    def __int__(self, **kwargs):
+        super.__init__(**kwargs)
+
+
+class AllToolBar(MDNavigationLayout):
+    def __int__(self, **kwargs):
+        super.__init__(**kwargs)
 
 
 class YouTube:
@@ -1017,6 +1040,46 @@ class YouTube:
         self.loading = False
 
 
+class ShowCase(Screen):
+    mode = None
+    # widgets = []
+
+    def show(self, mode='music'):
+        if sm.current == 'showcase':
+            if mode == self.mode:
+                return
+            else:
+                self.ids.container.clear_widgets()
+        self.mode = mode
+        items = list_items(mode)
+        if items is None:
+            label = MDLabel(text='Hurray no error log found')
+            label.size_hint_y = None
+            label.center_x, label.center_y = 0.5, 0.5
+            label.halign = 'center'
+            label.valign = 'center'
+            label.disabled = True
+            self.ids.container.add_widget(label)
+            return
+        for item in items:
+            button = OneLineAvatarListItem(text=item)
+            # button.bind(on_release=self.play)
+            self.ids.container.add_widget(button)
+            # self.widgets.append(button)
+
+    def on_leave(self):
+        self.ids.container.clear_widgets()
+        # self.widgets = []
+        # self.clear_widgets()
+        # self.add_widget(AllToolBar())
+
+    def play(self, file):
+        print(file.text)
+        print(os.getcwd())
+        # os.stat(f".\\{file.text}")
+        SoundLoader().load(f'{os.getcwd()}\\{file.text}').play()
+
+
 class DownloadedItems(Screen):
     def show(self, folder='Music'):
         pass
@@ -1032,6 +1095,10 @@ class HomeScreen(Screen):
     def on_enter(self):
         self.ids['random_stuff'].text = random.choice(random_text_home)
         self.isLoading = False
+        # toolbar.change()
+        for i in self.ids:
+            print(i)
+        # self.ids['toolbar'].change()
 
     def search(self):
         text = self.ids['link'].text.strip()
@@ -1346,8 +1413,7 @@ class DownloadScreen(Screen):
         self.download_engine.set_filter(res=self.quality, audio_only=self.audio_only, video_only=self.video_only)
         self.ids['download_progress'].value = 0
         self.ids['download_percentage'].text = ''
-        if self.ids['spinner'].text not in self.download_engine.video_qualities and self.ids[
-            'spinner'].text != '':  # I don't know why I wrote this
+        if self.ids['spinner'].text not in self.download_engine.video_qualities and self.ids['spinner'].text != '':  # I don't know why I wrote this
             app.toast(self.ids['spinner'].text + ' is not available')
             self.ids['spinner'].text = self.download_engine.video_qualities[0]
 
@@ -1492,6 +1558,7 @@ class SettingsScreen(Screen):
 
     def set_color(self, color):
         app.theme_cls.primary_palette = color
+        data_engine.data['color_pallet'] = color
 
     def on_enter(self):
         self.ids['spinner_pick'].text = data_engine.data['color_pallet']
@@ -1540,6 +1607,13 @@ class MainApp(MDApp):
     def goto_videos(self):
         set_current_screen('spinner_screen')
 
+    def showcase(self, mode):
+        if sm.current == 'showcase' and showcase.mode != mode:
+            set_current_screen(previous_screen)
+            time.sleep(0.2)
+        showcase.show(mode)
+        set_current_screen('showcase')
+
     def fab_callback(self, instance):
         if instance.icon == "theme-light-dark":
             self.change_theme()
@@ -1582,6 +1656,8 @@ class MainApp(MDApp):
 
     def on_start(self):
         global auto_download
+        if json_error:
+            self.toast('Something went!!! wrong data reset')
         if not data_engine.data['isAgree to T&C']:
             class Disclaimer(Screen):
                 def agree(self):
@@ -1639,10 +1715,19 @@ if __name__ == "__main__":
     settings = SettingsScreen(name='settings')
     download = DownloadScreen(name='download')
     spinner = SpinnerScreen(name='spinner_screen')
+    showcase = ShowCase(name='showcase')
+
+    home.add_widget(HomeToolBar())
+    result.add_widget(AllToolBar())
+    settings.add_widget(AllToolBar())
+    download.add_widget(AllToolBar())
+    showcase.add_widget(AllToolBar())
+
     sm.add_widget(home)
     sm.add_widget(result)
     sm.add_widget(loading)
     sm.add_widget(settings)
     sm.add_widget(download)
     sm.add_widget(spinner)
+    sm.add_widget(showcase)
     app.run()
