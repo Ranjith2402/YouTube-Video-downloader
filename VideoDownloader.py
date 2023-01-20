@@ -24,6 +24,7 @@ def new_name(name: str, audio=False):
     try:
         tmp = name.split('.')
         format_ = tmp[-1] if audio else 'mp3'
+        print('format -->', format_)
         name = '.'.join(tmp[:-1])
     except Union[KeyError, IndexError]:
         format_ = 'mp4' if audio else 'mp3'

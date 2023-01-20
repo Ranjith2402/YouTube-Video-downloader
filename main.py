@@ -23,7 +23,7 @@ from kivymd.uix.screen import Screen
 from kivy.factory import Factory
 from kivymd.uix.navigationdrawer.navigationdrawer import MDNavigationLayout
 from kivy.utils import platform
-from kivymd.uix.list.list import OneLineAvatarListItem
+from kivymd.uix.list.list import OneLineIconListItem, IconLeftWidget
 from kivymd.uix.label import MDLabel
 # from kivy.core.window import EventLoop
 from kivy.core.clipboard import Clipboard
@@ -390,131 +390,138 @@ Builder.load_string("""
 
 <DownLoadScreen>:
     #MDScreen:
-    ScrollView:
-        do_scroll_x: False
-        #always_overscroll: False
-        BoxLayout:
-            id: layout
-            orientation: "vertical"
-            spacing: 50
-            padding: 10
+    BoxLayout:
+        orientation: 'vertical'
+        # size_hint_y: None
+        # height: '70dp'
+        BoxLayout:  # this is to give top padding
             size_hint_y: None
-            height: self.minimum_height
+            height: '70dp'
+        ScrollView:
+            do_scroll_x: False
+            #always_overscroll: False
             BoxLayout:
-                id: thumbnail
-                size_hint_y: None
-                height: self.minimum_height
-                spacing: 10
+                id: layout
                 orientation: "vertical"
-
-            BoxLayout:
-                id: vid_q
+                spacing: 50
+                padding: 10
                 size_hint_y: None
                 height: self.minimum_height
-                MDLabel:
-                    text: " Video Quality    "
-                    halign: "right"
-                Spinner:
-                    id: spinner
-                    size_hint: None, None
-                    background_normal: ''
-                    height: dp(40)
-                    width: dp(100)
-                    # pos_hint: {'center_y': 0.5}
-                    background_color: app.theme_cls.primary_color
-                    values: '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p'
-                    on_text: root.set_quality(self.text)
-            BoxLayout:
-                id: only_vid_q
-                size_hint_y: None
-                height: self.minimum_height
-                MDLabel:
-                    text: "Download video Only    "
-                    halign: "right"
-                MDSwitch:
-                    id: isVideo
-                    pos_hint: {"right": 0.95, "center_y": 0.5}
-                    on_active: root.disable_video(video_only=True)
-
-                MDLabel:
-                    text: " only video    "
-                    halign: "right"
-                Spinner:
-                    id: spinner_video_only
-                    disabled: True
-                    size_hint: None, None
-                    background_normal: ''
-                    height: dp(40)
-                    width: dp(100)
-                    background_color: app.theme_cls.primary_color
-                    pos_hint: {'center_y': 0.5}
-                    values: '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p'
-                    on_text: root.set_quality(self.text, video_only=True)
-
-            # BoxLayout:
-            #     id: aud_q
-            #     MDLabel:
-            #         text: "Audio Bit-rate    "
-            #         halign: "right"
-            #     Spinner:
-            #         id: spinner2
-            #         size_hint: None, None
-            #         size: 100, 50
-            #         pos_hint: {'center_y': 0.5}
-            #         values: '320kbps', '128kbps', '64kbps'
-            #         on_text: root.set_aud_quality(self.text)
-
-            BoxLayout:
-                id: audio
-                size_hint_y: None
-                height: self.minimum_height
-                padding: cm(0.3)
-                MDLabel:
-                    text: " audio bit-rate    "
-                    halign: "right"
-                Spinner:
-                    disabled: True
-                    id: spinner_audio_only
-                    size_hint: None, None
-                    background_normal: ''
-                    height: dp(40)
-                    width: dp(100)
-                    pos_hint: {'center_y': 0.5}
-                    background_color: app.theme_cls.primary_color
-                    values: '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p'
-                    on_text: root.set_quality(self.text, audio_only=True)
-                MDLabel:
-                    text: "Download audio Only    "
-                    halign: "right"
-                MDSwitch:
-                    id: isAudio
-                    pos_hint: {"right": 0.95, "center_y": 0.5}
-                    on_active: root.disable_video()
-
-            BoxLayout:
-                MDProgressBar:
-                    # size_hint: 0.9, None
-                    id: download_progress
-                MDLabel:
-                    id: download_percentage
-                    text: ''
-                    size_hint_x: None
-                    halign: 'center'
-                    # width: self.texture_size[0] + 10
-
-            MDRoundFlatIconButton:
-                id: download_button
-                icon: "download"
-                text: "Download"
-                on_press: root.download()
-                pos_hint: {"center_x": 0.5, "y": 0.01}
-
-            MDRoundFlatIconButton:
-                id: watch_button
-                icon: "youtube"
-                text: "watch on YouTube"
-                on_press: root.goto_youtube()
-                pos_hint: {"center_x": 0.5, "y": 0.01}
+                BoxLayout:
+                    id: thumbnail
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: 10
+                    orientation: "vertical"
+    
+                BoxLayout:
+                    id: vid_q
+                    size_hint_y: None
+                    height: self.minimum_height
+                    MDLabel:
+                        text: " Video Quality    "
+                        halign: "right"
+                    Spinner:
+                        id: spinner
+                        size_hint: None, None
+                        background_normal: ''
+                        height: dp(40)
+                        width: dp(100)
+                        # pos_hint: {'center_y': 0.5}
+                        background_color: app.theme_cls.primary_color
+                        values: '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p'
+                        on_text: root.set_quality(self.text)
+                BoxLayout:
+                    id: only_vid_q
+                    size_hint_y: None
+                    height: self.minimum_height
+                    MDLabel:
+                        text: "Download video Only    "
+                        halign: "right"
+                    MDSwitch:
+                        id: isVideo
+                        pos_hint: {"right": 0.95, "center_y": 0.5}
+                        on_active: root.disable_video(video_only=True)
+    
+                    MDLabel:
+                        text: " only video    "
+                        halign: "right"
+                    Spinner:
+                        id: spinner_video_only
+                        disabled: True
+                        size_hint: None, None
+                        background_normal: ''
+                        height: dp(40)
+                        width: dp(100)
+                        background_color: app.theme_cls.primary_color
+                        pos_hint: {'center_y': 0.5}
+                        values: '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p'
+                        on_text: root.set_quality(self.text, video_only=True)
+    
+                # BoxLayout:
+                #     id: aud_q
+                #     MDLabel:
+                #         text: "Audio Bit-rate    "
+                #         halign: "right"
+                #     Spinner:
+                #         id: spinner2
+                #         size_hint: None, None
+                #         size: 100, 50
+                #         pos_hint: {'center_y': 0.5}
+                #         values: '320kbps', '128kbps', '64kbps'
+                #         on_text: root.set_aud_quality(self.text)
+    
+                BoxLayout:
+                    id: audio
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: cm(0.3)
+                    MDLabel:
+                        text: " audio bit-rate    "
+                        halign: "right"
+                    Spinner:
+                        disabled: True
+                        id: spinner_audio_only
+                        size_hint: None, None
+                        background_normal: ''
+                        height: dp(40)
+                        width: dp(100)
+                        pos_hint: {'center_y': 0.5}
+                        background_color: app.theme_cls.primary_color
+                        values: '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p'
+                        on_text: root.set_quality(self.text, audio_only=True)
+                    MDLabel:
+                        text: "Download audio Only    "
+                        halign: "right"
+                    MDSwitch:
+                        id: isAudio
+                        pos_hint: {"right": 0.95, "center_y": 0.5}
+                        on_active: root.disable_video()
+    
+                BoxLayout:
+                    MDProgressBar:
+                        # size_hint: 0.9, None
+                        id: download_progress
+                    MDLabel:
+                        id: download_percentage
+                        text: ''
+                        size_hint_x: None
+                        halign: 'center'
+                        # width: self.texture_size[0] + 10
+    
+                MDRoundFlatIconButton:
+                    id: download_button
+                    icon: "download"
+                    text: "Download"
+                    on_press: root.download()
+                    pos_hint: {"center_x": 0.5, "y": 0.01}
+    
+                MDRoundFlatIconButton:
+                    id: watch_button
+                    icon: "youtube"
+                    text: "watch on YouTube"
+                    on_press: root.goto_youtube()
+                    pos_hint: {"center_x": 0.5, "y": 0.01}
 
 #___________________________________Ends__________________________________________
 
@@ -716,13 +723,11 @@ try:
         json_error = True
         raise FileNotFoundError
 except FileNotFoundError:
-    import data_handler
-
-    data_handler.create()
+    data_engine.create()
     data_engine.load()
 
 data_engine.cwd = os.getcwd()
-previous_screen = "home"
+previous_screen = current_screen = "home"
 
 last_esc_down = tap_start_time = time.time()
 tap_count = 0
@@ -960,8 +965,9 @@ def set_current_screen(screen):
 
 def _set_screen(_):
     global previous_screen
-    if previous_screen != current_screen:
+    if previous_screen != current_screen and sm.current not in ('spinner_screen', 'showcase'):
         previous_screen = sm.current
+        # print("previous screen -->", previous_screen)
     sm.current = current_screen
 
 
@@ -980,14 +986,14 @@ def regex_match_link(clip):
 
 def list_items(mode):
     if mode == "music":
-        return [i for i in os.listdir(f"./{mode}") if i.lower().endswith(('.mp3', '.wav', '.ogg'))]
+        tmp = [i for i in os.listdir(f"./{mode}") if i.lower().endswith(('.mp3', '.wav', '.ogg'))]
     elif mode == 'movies':
-        return [i for i in os.listdir(f'./{mode}') if i.lower().endswith(('.mp4', '.3gpp'))]
-    elif mode == 'error log':
+        tmp = [i for i in os.listdir(f'./{mode}') if i.lower().endswith(('.mp4', '.3gpp'))]
+    else:
         tmp = [i for i in os.listdir(f'./{mode}') if i.lower().endswith('.txt') and re.search(r'\(\d\).txt', i)]
-        if not tmp:
-            return None
-        return tmp
+    if not tmp:
+        return None
+    return tmp
 
 
 class HomeToolBar(MDNavigationLayout):
@@ -1051,24 +1057,43 @@ class ShowCase(Screen):
             else:
                 self.ids.container.clear_widgets()
         self.mode = mode
-        items = list_items(mode)
+        Clock.schedule_once(self.load, 0.3)
+
+    def load(self, _=None):
+        set_current_screen('spinner_screen')
+        items = list_items(self.mode)
         if items is None:
-            label = MDLabel(text='Hurray no error log found')
+            if self.mode == 'error log':
+                text = 'Hurray no error log found'
+            elif self.mode == 'music':
+                text = 'No audio downloaded yet'
+            else:
+                text = 'No videos downloaded yet'
+            label = MDLabel(text=text)
             label.size_hint_y = None
-            label.center_x, label.center_y = 0.5, 0.5
-            label.halign = 'center'
-            label.valign = 'center'
+            label.center_x = label.center_y = 0.5
+            label.halign = label.valign = 'center'
             label.disabled = True
             self.ids.container.add_widget(label)
-            return
-        for item in items:
-            button = OneLineAvatarListItem(text=item)
-            # button.bind(on_release=self.play)
-            self.ids.container.add_widget(button)
-            # self.widgets.append(button)
+        elif self.mode == 'error log':
+            for item in items:
+                button = OneLineIconListItem(IconLeftWidget(icon='check-box'), text=item)  # can't create icon widget outside as it needs parent
+                self.ids.container.add_widget(button)
+        elif self.mode == 'music':
+            for item in items:
+                button = OneLineIconListItem(IconLeftWidget(icon='music'), text=item)
+                # button.bind(on_release=self.play)
+                self.ids.container.add_widget(button)
+                # self.widgets.append(button)
+        else:
+            for item in items:
+                button = OneLineIconListItem(IconLeftWidget(icon='movie'), text=item)
+                self.ids.container.add_widget(button)
+        set_current_screen('showcase')
 
     def on_leave(self):
         self.ids.container.clear_widgets()
+        self.mode = None
         # self.widgets = []
         # self.clear_widgets()
         # self.add_widget(AllToolBar())
@@ -1275,6 +1300,7 @@ class ResultScreen(Screen):
 
 
 class DownloadScreen(Screen):
+
     def __init__(self, **kw):
         super().__init__(**kw)
         self.post_raise = False
@@ -1362,7 +1388,7 @@ class DownloadScreen(Screen):
             self.quality = self.download_engine.video_qualities[0]
             self.ids['spinner'].text = str(self.quality)
         elif msg == "file exists":
-            dialog_type2("It seems this file already downloaded!!! (press any where to cancel)",
+            dialog_type2("It seems this file already downloaded!!! (press any where out side to cancel download)",
                          button1='Rename',
                          button2='Download again',
                          title='File exists',
@@ -1596,8 +1622,10 @@ class MainApp(MDApp):
         print(os.getcwd())
         if send and platform == "android":
             from kvdroid.tools import share_files
+            # TODO: file format is not practical
             share_files(os.getcwd() + "/error log/error.txt")
         if delete_log:
+            # TODO: delete data file arises an error
             exceptions_handler.delete_log_file()
 
     def select(self, instance):
@@ -1608,11 +1636,11 @@ class MainApp(MDApp):
         set_current_screen('spinner_screen')
 
     def showcase(self, mode):
-        if sm.current == 'showcase' and showcase.mode != mode:
-            set_current_screen(previous_screen)
-            time.sleep(0.2)
+        # if sm.current == 'showcase' and showcase.mode != mode:
+        #     set_current_screen(previous_screen)
+        #     time.sleep(0.2)
         showcase.show(mode)
-        set_current_screen('showcase')
+        # set_current_screen('showcase')
 
     def fab_callback(self, instance):
         if instance.icon == "theme-light-dark":
