@@ -24,10 +24,13 @@ from kivy.factory import Factory
 from kivymd.uix.navigationdrawer.navigationdrawer import MDNavigationLayout
 from kivy.utils import platform
 from kivymd.uix.list.list import OneLineIconListItem, IconLeftWidget
-from kivymd.uix.label import MDLabel
 # from kivy.core.window import EventLoop
 from kivy.core.clipboard import Clipboard
 from kivy.core.audio import SoundLoader
+
+if platform == 'android':
+    # jnius is supported only for android
+    from AudioPlayer import AudioPlayer
 
 ssl._create_default_https_context = ssl.SSLContext
 
@@ -625,6 +628,105 @@ Builder.load_string("""
                 size_hint_y: None
                 height: self.minimum_height
                 orientation: "vertical"
+#____________________________ENDS_____________________________
+
+<MediaPLayer>:
+    MDScreen:
+        canvas:
+            Color:
+                rgba: app.theme_cls.primary_light
+            Rectangle:
+                size: self.size
+                pos: self.pos
+        
+        MDIconButton:
+            icon: 'chevron-left'
+            pos_hint: {'top': 1}
+            id: navigate_up
+            theme_icon_color: 'ContrastParentBackground'
+            on_release: app.back()
+        
+        MDLabel:
+            text: 'song name'
+            id: name
+            theme_text_color: 'ContrastParentBackground'
+            pos_hint: {'top': 1.43, 'x':0.03}
+        
+        MDBoxLayout:
+            size_hint: None, None
+            pos_hint: {'center_x': 0.5, 'center_y':0.58}
+            height: root.height * 0.6
+            width: root.width * 0.8
+            padding: 25
+            canvas.after:
+                Color:
+                    rgba: 0, 0, 0, .7
+                Line:
+                    width: 2
+                    rounded_rectangle: (self.x, self.y, self.right - self.x, self.top - self.y, 16)
+                    # rgb: 1, 0, 1
+                # Rectangle:
+                #     size: self.size
+                #     pos: self.pos
+                
+            Image:
+                source: 'images/music-icon.png'
+        
+        MDBoxLayout:
+            size_hint_y: None
+            height: self.minimum_height + dp(25)
+            pos_hint: {'y': control_panel.top / root.height + 0.1}
+            MDLabel:
+                id: curr_pos
+                halign: 'center'
+                # size_hint: None, None
+                # width: self.texture_size[0]
+                text: root.process_to_time(slider.value)
+                color: 0, 0, 0, .85
+            MDSlider:
+                size_hint_x: None
+                width: root.width * .75
+                id: slider
+                hint: False
+                show_off: False
+            MDLabel:
+                # size_hint: None, None
+                id: max_time
+                text: '3:32'
+                halign: 'center'
+                color: 0, 0, 0, .85
+        
+        MDBoxLayout:
+            id: control_panel
+            size_hint: None, None
+            width: self.minimum_width
+            pos_hint: {'center_x': 0.5, 'y': 0.05}
+            MDIconButton:
+                icon_size: '25sp'
+                theme_icon_color: 'ContrastParentBackground'
+                icon: 'rewind-10'
+                pos_hint: {'center_y': 0.5}
+            MDIconButton:
+                icon_size: '46sp'
+                theme_icon_color: 'ContrastParentBackground'
+                icon: 'skip-previous'
+                pos_hint: {'center_y': 0.5}
+            MDIconButton:
+                icon_size: '64sp'
+                theme_icon_color: 'ContrastParentBackground'
+                icon: 'play'
+                pos_hint: {'center_y': 0.5}
+            MDIconButton:
+                icon_size: '46sp'
+                theme_icon_color: 'ContrastParentBackground'
+                icon: 'skip-next'
+                pos_hint: {'center_y': 0.5}
+            MDIconButton:
+                icon_size: '25sp'
+                theme_icon_color: 'ContrastParentBackground'
+                icon: 'fast-forward-10'
+                pos_hint: {'center_y': 0.5}
+    
 
 """)
 
@@ -913,7 +1015,7 @@ def check_system_theme() -> Union[str, None]:
             return "Dark"
         return 'Light'
     else:
-        return None  # think not needed
+        return None  # I think not needed
 
 
 def minimised(*args):
@@ -953,6 +1055,9 @@ def hook_keyboard(_, key, *__):
         elif sm.current == 'showcase':
             set_current_screen(previous_screen)
             return True
+        elif sm.current == 'media_player':
+            set_current_screen('showcase')
+            return True
     elif key == 13 and sm.current == 'home':
         home.search()
 
@@ -965,7 +1070,7 @@ def set_current_screen(screen):
 
 def _set_screen(_):
     global previous_screen
-    if previous_screen != current_screen and sm.current not in ('spinner_screen', 'showcase'):
+    if previous_screen != current_screen and sm.current not in ('spinner_screen', 'showcase', 'media_player'):
         previous_screen = sm.current
         # print("previous screen -->", previous_screen)
     sm.current = current_screen
@@ -996,14 +1101,27 @@ def list_items(mode):
     return tmp
 
 
+class MediaPlayer(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if platform == 'android':
+            self.audio_player = AudioPlayer()
+
+    def play(self, path):
+        self.audio_player.file_path = path
+
+    def process_to_time(self, val):
+        return str(round(val, 2))
+
+
 class HomeToolBar(MDNavigationLayout):
-    def __int__(self, **kwargs):
-        super.__init__(**kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class AllToolBar(MDNavigationLayout):
-    def __int__(self, **kwargs):
-        super.__init__(**kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 
 class YouTube:
@@ -1082,7 +1200,7 @@ class ShowCase(Screen):
         elif self.mode == 'music':
             for item in items:
                 button = OneLineIconListItem(IconLeftWidget(icon='music'), text=item)
-                # button.bind(on_release=self.play)
+                button.bind(on_release=self.play)
                 self.ids.container.add_widget(button)
                 # self.widgets.append(button)
         else:
@@ -1099,10 +1217,8 @@ class ShowCase(Screen):
         # self.add_widget(AllToolBar())
 
     def play(self, file):
-        print(file.text)
-        print(os.getcwd())
-        # os.stat(f".\\{file.text}")
-        SoundLoader().load(f'{os.getcwd()}\\{file.text}').play()
+        if platform == 'android':
+            media_player.play(file)
 
 
 class DownloadedItems(Screen):
@@ -1619,6 +1735,7 @@ class MainApp(MDApp):
         hook_keyboard(None, 27)
 
     def send_log_file(self, delete_log=False, send=True):
+
         print(os.getcwd())
         if send and platform == "android":
             from kvdroid.tools import share_files
@@ -1744,6 +1861,7 @@ if __name__ == "__main__":
     download = DownloadScreen(name='download')
     spinner = SpinnerScreen(name='spinner_screen')
     showcase = ShowCase(name='showcase')
+    media_player = MediaPlayer(name='media_player')
 
     home.add_widget(HomeToolBar())
     result.add_widget(AllToolBar())
@@ -1758,4 +1876,8 @@ if __name__ == "__main__":
     sm.add_widget(download)
     sm.add_widget(spinner)
     sm.add_widget(showcase)
+    sm.add_widget(media_player)
+
+    sm.current = 'media_player'
+
     app.run()
