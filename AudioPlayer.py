@@ -67,6 +67,8 @@ class AudioPlayer:
     def file_path(self, path):
         assert isinstance(path, str), 'File path is not \'str\''
         if self.path == path:
+            if self.current_pos == self.duration:
+                self.play()
             return
         elif self.audioplayer is not None:
             self.audioplayer = MediaPlayer()

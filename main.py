@@ -681,7 +681,7 @@ Builder.load_string("""
                 halign: 'center'
                 # size_hint: None, None
                 # width: self.texture_size[0]
-                text: root.process_to_time(slider.value)
+                text: root.process_to_time(round(slider.value))
                 color: 0, 0, 0, .85
             MDSlider:
                 size_hint_x: None
@@ -692,7 +692,7 @@ Builder.load_string("""
             MDLabel:
                 # size_hint: None, None
                 id: max_time
-                text: '3:32'
+                text: '1:40'
                 halign: 'center'
                 color: 0, 0, 0, .85
         
@@ -705,6 +705,7 @@ Builder.load_string("""
                 icon_size: '25sp'
                 theme_icon_color: 'ContrastParentBackground'
                 icon: 'rewind-10'
+                on_release: root.jump(True)
                 pos_hint: {'center_y': 0.5}
             MDIconButton:
                 icon_size: '46sp'
@@ -725,6 +726,7 @@ Builder.load_string("""
                 icon_size: '25sp'
                 theme_icon_color: 'ContrastParentBackground'
                 icon: 'fast-forward-10'
+                on_press: root.jump(False)
                 pos_hint: {'center_y': 0.5}
     
 
@@ -1106,12 +1108,42 @@ class MediaPlayer(Screen):
         super().__init__(**kwargs)
         if platform == 'android':
             self.audio_player = AudioPlayer()
+        self.clock_event = Clock.schedule_interval(self.update, 1/64)  # 60fps 4 fps bonus also makes clear division instead of 60 which leads to 0.0166666666666666
+
+    def load(self):
+        pass
 
     def play(self, path):
         self.audio_player.file_path = path
+        self.set_max_values()
+
+    def seek(self, to):
+        self.audio_player.seek(to)
+
+    def set_max_values(self):
+        val = int(self.audio_player.length / 1000)
+        self.ids['slider'].max = val
+        self.ids['max'].text = self.process_to_time(val)
+
+    def update(self, _=None):
+        self.ids['slider'].val = self.audio_player.length / 1000
+
+    def update_(self, value):
+        self.ids['slider'].val = value
+
+    def jump(self, is_backward):
+        self.audio_player.jump_in_time(backward=is_backward)
+
+    def play_next(self):
+        pass
 
     def process_to_time(self, val):
-        return str(round(val, 2))
+        h = val // 3600
+        m = (val // 60) % 60
+        s = val % 60
+        if h:
+            return f"{h}:{m}:{s}"
+        return f"{m}:{s}"
 
 
 class HomeToolBar(MDNavigationLayout):
