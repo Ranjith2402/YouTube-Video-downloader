@@ -1,11 +1,11 @@
-from jnius import autoclass
-
+# from jnius import autoclass
+# TODO: clean this and delete temporary class
 """
 All functions are implemented according to android studio
 https://developer.android.com/reference/android/media/MediaPlayer
 date: 25-01-2023
 """
-MediaPlayer = autoclass('android.media.MediaPlayer')
+# MediaPlayer = autoclass('android.media.MediaPlayer')
 
 
 class AudioPlayer:
@@ -21,7 +21,7 @@ class AudioPlayer:
 
     def pause(self) -> None:
         self.state = 'ready'
-        self.audioplayer.stop()
+        self.audioplayer.pause()
 
     def seek(self, to: int) -> None:
         self.audioplayer.seekTo(to)
@@ -78,6 +78,63 @@ class AudioPlayer:
         self.duration = self.audioplayer.getDuration()
         self.play()
         # self.current_pos = 0
+
+
+class _AudioPlayer:
+    def __init__(self, file_path=None):
+        self.state = 'playing'
+        self.duration = 134568
+        self.path = 'path/to/file'
+        self.current_position = 0
+
+    def play(self) -> None:
+        self.state = 'playing'
+
+    def pause(self) -> None:
+        self.state = 'paused'
+
+    def seek(self, to: int) -> None:
+        self.current_position = to
+
+    def jump_in_time(self, t: int = 10, backward: bool = False) -> None:
+        """
+        :param t: time \'t\' is seconds to jump forward or backward
+        :param backward: if skipping is backward or not
+        :return: Nothing
+        """
+
+        new_time = self.current_pos + t * 1000 * (1 - 2 * int(backward))  # gives -1 if backward else +1 (not tested)
+        print(self.current_pos, new_time)
+        if new_time > self.duration:
+            self.seek(self.duration)
+        elif new_time < 0:
+            self.seek(0)
+        else:
+            self.seek(new_time)
+
+    def release(self):
+        pass
+
+    @property
+    def length(self) -> int:
+        return self.duration
+
+    @property
+    def current_pos(self) -> int:
+        return self.current_position
+
+    @property
+    def is_playing(self) -> bool:
+        return self.state == 'playing'
+
+    @property
+    def file_path(self) -> str:
+        return self.path
+
+    @file_path.setter
+    def file_path(self, value):
+        self.play()
+        print(value)
 
 
 if __name__ == "__main__":

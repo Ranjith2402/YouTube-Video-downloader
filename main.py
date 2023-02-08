@@ -26,11 +26,13 @@ from kivy.utils import platform
 from kivymd.uix.list.list import OneLineIconListItem, IconLeftWidget
 # from kivy.core.window import EventLoop
 from kivy.core.clipboard import Clipboard
-from kivy.core.audio import SoundLoader
+from kivymd.uix.label import MDLabel
 
 if platform == 'android':
-    # jnius is supported only for android
+    # jnius is not supported windows
     from AudioPlayer import AudioPlayer
+else:
+    from AudioPlayer import _AudioPlayer as AudioPlayer
 
 ssl._create_default_https_context = ssl.SSLContext
 
@@ -124,6 +126,7 @@ Builder.load_string("""
     on_release: self.parent.parent.parent.set_state('close')
     icon_color: app.theme_cls.primary_light
     text_color: app.theme_cls.opposite_bg_light if app.theme_cls.theme_style == "Light" else app.theme_cls.opposite_bg_dark
+    selected_color: app.theme_cls.primary_color
 
 
 <MyNavigationDrawerItem@MDNavigationDrawer>:
@@ -180,6 +183,7 @@ Builder.load_string("""
                 left_action_items: [["menu", lambda x: nav_bar.set_state("open")]]
 
     MyNavigationDrawerItem:
+        swipe_edge_width: '25dp'
         id: nav_bar
 
 
@@ -196,6 +200,7 @@ Builder.load_string("""
                 left_action_items: [["arrow-left", lambda x: app.back()], ["menu", lambda x: nav_bar.set_state("open")]]
 
     MyNavigationDrawerItem:
+        swipe_edge_width: '25dp'
         id: nav_bar
 
 
@@ -621,9 +626,9 @@ Builder.load_string("""
         BoxLayout:
             size_hint_y: None
             height: '70dp'
-        ScrollView:
+        RecycleView:
             id: scroll_layout
-            BoxLayout:
+            MDBoxLayout:
                 id: container
                 size_hint_y: None
                 height: self.minimum_height
@@ -647,8 +652,8 @@ Builder.load_string("""
             on_release: app.back()
         
         MDLabel:
-            text: 'song name'
-            id: name
+            text: '...'
+            id: song_name
             theme_text_color: 'ContrastParentBackground'
             pos_hint: {'top': 1.43, 'x':0.03}
         
@@ -708,19 +713,23 @@ Builder.load_string("""
                 on_release: root.jump(True)
                 pos_hint: {'center_y': 0.5}
             MDIconButton:
-                icon_size: '46sp'
+                icon_size: '50sp'
                 theme_icon_color: 'ContrastParentBackground'
                 icon: 'skip-previous'
+                on_release: root.play_last()
                 pos_hint: {'center_y': 0.5}
             MDIconButton:
-                icon_size: '64sp'
+                icon_size: '100dp'
+                id: play
                 theme_icon_color: 'ContrastParentBackground'
                 icon: 'play'
+                on_release: root.pause_play()
                 pos_hint: {'center_y': 0.5}
             MDIconButton:
-                icon_size: '46sp'
+                icon_size: '50sp'
                 theme_icon_color: 'ContrastParentBackground'
                 icon: 'skip-next'
+                on_release: root.play_next()
                 pos_hint: {'center_y': 0.5}
             MDIconButton:
                 icon_size: '25sp'
@@ -1103,49 +1112,6 @@ def list_items(mode):
     return tmp
 
 
-class MediaPlayer(Screen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if platform == 'android':
-            self.audio_player = AudioPlayer()
-        self.clock_event = Clock.schedule_interval(self.update, 1/64)  # 60fps 4 fps bonus also makes clear division instead of 60 which leads to 0.0166666666666666
-
-    def load(self):
-        pass
-
-    def play(self, path):
-        self.audio_player.file_path = path
-        self.set_max_values()
-
-    def seek(self, to):
-        self.audio_player.seek(to)
-
-    def set_max_values(self):
-        val = int(self.audio_player.length / 1000)
-        self.ids['slider'].max = val
-        self.ids['max'].text = self.process_to_time(val)
-
-    def update(self, _=None):
-        self.ids['slider'].val = self.audio_player.length / 1000
-
-    def update_(self, value):
-        self.ids['slider'].val = value
-
-    def jump(self, is_backward):
-        self.audio_player.jump_in_time(backward=is_backward)
-
-    def play_next(self):
-        pass
-
-    def process_to_time(self, val):
-        h = val // 3600
-        m = (val // 60) % 60
-        s = val % 60
-        if h:
-            return f"{h}:{m}:{s}"
-        return f"{m}:{s}"
-
-
 class HomeToolBar(MDNavigationLayout):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1196,21 +1162,112 @@ class YouTube:
         self.loading = False
 
 
+class MediaPlayer(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.last_child = None
+        self.do_update = True
+        self.state = 'ready'
+        self.is_playing = False
+        self.audio_player = AudioPlayer()
+        self.clock_event = Clock.schedule_interval(self.update, 1/62.5)  # 60fps 2.5 fps bonus (just kidding)
+
+    def play(self, path, goto_screen=True):
+        if self.last_child is not None:
+            self.last_child.theme_text_color = "Primary"
+        child = showcase.audio_items[path]
+        child.theme_text_color = 'Custom'
+        child.text_color = child.icon_color = app.theme_cls.colors[data_engine.data['color_pallet']]['A400']
+        self.last_child = child
+        self.audio_player.file_path = "music/" + path
+        self.set_max_values()
+        self.state = 'playing'
+        self.ids['song_name'].text = path
+        if not goto_screen:
+            return
+        set_current_screen('media_player')
+
+    def pause_play(self):
+        if self.audio_player.is_playing:
+            self.ids['play'].icon = 'pause'
+            self.audio_player.pause()
+            self.state = 'paused'
+        else:
+            self.ids['play'].icon = 'play'
+            self.audio_player.play()
+            self.state = 'playing'
+
+    def play_next(self):
+        index = showcase.selected_index + 1
+        if index >= len(showcase.audio_files):
+            index = 0
+        self.play(showcase.audio_files[index])
+        showcase.selected_index = index
+
+    def play_last(self):
+        index = showcase.selected_index - 1
+        if index < 0:
+            index = len(showcase.audio_files) - 1
+        self.play(showcase.audio_files[index])
+        showcase.selected_index = index
+
+    def seek(self, to):
+        self.audio_player.seek(to)
+
+    def set_max_values(self):
+        val = int(self.audio_player.length / 1000)
+        self.ids['slider'].max = val
+        self.ids['max_time'].text = self.process_to_time(val)
+
+    def update(self, _=None):
+        if self.do_update:
+            if self.ids['slider'].active:
+                self.do_update = False
+            elif not self.audio_player.is_playing and self.state not in ('ready', 'paused'):
+                self.play_next()
+                return
+            self.ids['slider'].value = self.audio_player.current_pos / 1000
+        else:
+            if self.ids['slider'].active:
+                return
+            self.seek(self.ids['slider'].value * 1000)
+            self.do_update = True
+
+    def update_(self, value):
+        self.ids['slider'].value = value
+
+    def jump(self, is_backward):
+        self.audio_player.jump_in_time(backward=is_backward)
+
+    def process_to_time(self, val):
+        h = val // 3600
+        m = (val // 60) % 60
+        s = val % 60
+        if h:
+            return f"{h}:{m:02d}:{s:02d}"
+        return f"{m}:{s:02d}"
+
+
 class ShowCase(Screen):
     mode = None
-    # widgets = []
+    audio_items = {}
+    audio_files = []
+    selected_index = None
 
     def show(self, mode='music'):
+        if sm.current == 'media_player':
+            set_current_screen('show_case')
+            return
         if sm.current == 'showcase':
             if mode == self.mode:
                 return
             else:
                 self.ids.container.clear_widgets()
         self.mode = mode
-        Clock.schedule_once(self.load, 0.3)
+        Clock.schedule_once(self.load, 3)
 
     def load(self, _=None):
-        set_current_screen('spinner_screen')
+        # set_current_screen('showcase')
         items = list_items(self.mode)
         if items is None:
             if self.mode == 'error log':
@@ -1230,27 +1287,40 @@ class ShowCase(Screen):
                 button = OneLineIconListItem(IconLeftWidget(icon='check-box'), text=item)  # can't create icon widget outside as it needs parent
                 self.ids.container.add_widget(button)
         elif self.mode == 'music':
-            for item in items:
-                button = OneLineIconListItem(IconLeftWidget(icon='music'), text=item)
-                button.bind(on_release=self.play)
-                self.ids.container.add_widget(button)
-                # self.widgets.append(button)
+            for i in range(5):
+                for item in items:
+                    button = OneLineIconListItem(IconLeftWidget(icon='music'), text=item)
+                    button.bind(on_release=self.play)
+                    self.ids.container.add_widget(button)
+                    self.audio_items[item] = button
+                    self.audio_files.append(item)
+                    time.sleep(1)
+                    print('new item added', item)
+                    # self.widgets.append(button)
         else:
             for item in items:
                 button = OneLineIconListItem(IconLeftWidget(icon='movie'), text=item)
                 self.ids.container.add_widget(button)
-        set_current_screen('showcase')
+        # set_current_screen('showcase')
 
     def on_leave(self):
+        while sm.current == 'showcase':
+            time.sleep(0.016)
+        if sm.current == 'media_player':
+            return
         self.ids.container.clear_widgets()
         self.mode = None
         # self.widgets = []
         # self.clear_widgets()
         # self.add_widget(AllToolBar())
 
-    def play(self, file):
-        if platform == 'android':
-            media_player.play(file)
+    def on_enter(self):
+        if self.selected_index is not None:
+            media_player.play(self.audio_files[self.selected_index], goto_screen=False)
+
+    def play(self, button):
+        media_player.play(button.text)
+        self.selected_index = self.audio_files.index(button.text)
 
 
 class DownloadedItems(Screen):
@@ -1789,7 +1859,7 @@ class MainApp(MDApp):
         #     set_current_screen(previous_screen)
         #     time.sleep(0.2)
         showcase.show(mode)
-        # set_current_screen('showcase')
+        set_current_screen('showcase')
 
     def fab_callback(self, instance):
         if instance.icon == "theme-light-dark":
@@ -1910,6 +1980,8 @@ if __name__ == "__main__":
     sm.add_widget(showcase)
     sm.add_widget(media_player)
 
-    sm.current = 'media_player'
+    # sm.current = 'media_player'
+    # media_player.play('path/to/audio/file')
+    # print(app.theme_cls.colors[data_engine.data['theme']])
 
     app.run()
