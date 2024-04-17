@@ -83,7 +83,7 @@ class AudioPlayer:
 class _AudioPlayer:
     def __init__(self, file_path=None):
         self.state = 'playing'
-        self.duration = 134568
+        self.duration = 13456827
         self.path = 'path/to/file'
         self.current_position = 0
 
@@ -98,7 +98,7 @@ class _AudioPlayer:
 
     def jump_in_time(self, t: int = 10, backward: bool = False) -> None:
         """
-        :param t: time \'t\' is seconds to jump forward or backward
+        :param t: time \'t\' in seconds to jump forward or backward
         :param backward: if skipping is backward or not
         :return: Nothing
         """

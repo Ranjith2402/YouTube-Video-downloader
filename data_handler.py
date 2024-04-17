@@ -1,5 +1,8 @@
 import json
 
+# "https://www.youtube.com/embed/nkNC6gyogNc
+# "https://youtu.be/s8C4-kYJjOw"
+
 
 class DataLoader:
     data = {}
@@ -16,7 +19,8 @@ class DataLoader:
               'follow system theme': False,
               'ui_mode': 1,
               'last link': '',
-              'isAgree to T&C': False}
+              'isAgree to T&C': False,
+              'last error file': ''}
 
     def create(self):
         with open('data.json', 'w+'):

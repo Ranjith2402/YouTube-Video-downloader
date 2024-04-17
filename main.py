@@ -2,6 +2,7 @@ import os
 import random
 import re
 import ssl
+import certifi
 import time
 import webbrowser
 import kivy.core.window
@@ -23,18 +24,33 @@ from kivymd.uix.screen import Screen
 from kivy.factory import Factory
 from kivymd.uix.navigationdrawer.navigationdrawer import MDNavigationLayout
 from kivy.utils import platform
-from kivymd.uix.list.list import OneLineIconListItem, IconLeftWidget
+from kivymd.uix.list.list import OneLineIconListItem
+from kivy.properties import StringProperty
 # from kivy.core.window import EventLoop
 from kivy.core.clipboard import Clipboard
-from kivymd.uix.label import MDLabel
+# from kivymd.uix.label import MDLabel
 
 if platform == 'android':
-    # jnius is not supported windows
+    # jnius is not supported for windows
+    import jnius
     from AudioPlayer import AudioPlayer
 else:
     from AudioPlayer import _AudioPlayer as AudioPlayer
 
-ssl._create_default_https_context = ssl.SSLContext
+# for security,
+# DEFAULT@SECLEVEL=3 cipher suite string is used
+# the set of cipher suites recommended by the current security standards and the highest level of security 'SECLEVEL=3'
+context = ssl.SSLContext
+context.set_ciphers(context(), "DEFAULT@SECLEVEL=3")
+context.minimum_version = ssl.TLSVersion.TLSv1_3
+context.check_hostname = True
+
+# Load the server's certificate and set up verification options
+context.load_verify_locations(context(), certifi.where())
+context.verify_mode = ssl.CERT_REQUIRED
+
+# this creates a default ssl context with the highest level of security
+ssl._create_default_https_context = context
 
 Builder.load_string("""
 #: import MDDialog kivymd.uix.dialog
@@ -121,6 +137,10 @@ Builder.load_string("""
                 texture_color: app.theme_cls.bg_normal
                 size_hint_x: 0.5
 
+<CustomOneLineIconListItem>:
+    IconLeftWidget:
+        icon: root.icon
+
 
 <NavigationDrawerItem@MDNavigationDrawerItem>:
     on_release: self.parent.parent.parent.set_state('close')
@@ -148,6 +168,13 @@ Builder.load_string("""
             text: "Music"
             # on_release: app.goto_videos()
             on_release: app.showcase("music")
+        
+        MDNavigationDrawerDivider:
+        NavigationDrawerItem:
+            icon: 'cog'
+            text: 'Customise'
+            on_release:
+                app.root.current = 'settings'
 
         MDNavigationDrawerDivider:
         NavigationDrawerItem:
@@ -203,6 +230,11 @@ Builder.load_string("""
         swipe_edge_width: '25dp'
         id: nav_bar
 
+<JustLoadScreen>:
+    MDLabel:
+        text: "Loading..."
+        halign: 'center'
+
 
 <HomeScreen>:
     MDScreen:
@@ -210,7 +242,7 @@ Builder.load_string("""
             data: app.fab_data
             callback: app.fab_callback
             root_button_anim: True
-
+        
         MDRectangleFlatIconButton:
             id: logo
             text: "YouTube"
@@ -251,6 +283,7 @@ Builder.load_string("""
             color: app.theme_cls.primary_color
             halign: 'center'
             pos_hint: {'center_x': 0.5, 'center_y': 0.4}
+    
 #___________________________________ENDS_____________________________________
 
 
@@ -620,22 +653,45 @@ Builder.load_string("""
 
 
 #_____________________________________________________ENDS__________________________________________________________
-<ShowCase>:
-    BoxLayout:
-        orientation: "vertical"
-        BoxLayout:
-            size_hint_y: None
-            height: '70dp'
-        RecycleView:
-            id: scroll_layout
-            MDBoxLayout:
-                id: container
+<ShowCaseScreen>:
+    MDScreen:
+        MDLabel:
+            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+            # size_hint: None, None
+            # size: self.texture_size
+            halign: 'center'
+            valign: 'center'
+            disabled: True
+            id: label
+        MDBoxLayout:
+            orientation: 'vertical'
+            # spacing: dp(10)
+            # padding: dp(20)
+            BoxLayout:
                 size_hint_y: None
-                height: self.minimum_height
-                orientation: "vertical"
+                height: '70dp'
+    
+            RecycleView:
+                id: rv
+                key_viewclass: 'viewclass'
+                key_size: 'height'
+    
+                RecycleBoxLayout:
+                    # padding: dp(10)
+                    id: container
+                    default_size: None, dp(48)
+                    default_size_hint: 1, None
+                    size_hint_y: None
+                    height: self.minimum_height
+                    orientation: 'vertical'
+
 #____________________________ENDS_____________________________
 
-<MediaPLayer>:
+
+<MyIconButton@MDIconButton>:
+    theme_icon_color: 'ContrastParentBackground'
+    pos_hint: {'center_y': 0.5}
+<MediaPLayerScreen>:
     MDScreen:
         canvas:
             Color:
@@ -644,23 +700,33 @@ Builder.load_string("""
                 size: self.size
                 pos: self.pos
         
-        MDIconButton:
-            icon: 'chevron-left'
+        MDBoxLayout:
+            id: label
+            orientation: 'vertical'
+            size_hint: 1, None
+            height: self.minimum_height
             pos_hint: {'top': 1}
-            id: navigate_up
-            theme_icon_color: 'ContrastParentBackground'
-            on_release: app.back()
-        
-        MDLabel:
-            text: '...'
-            id: song_name
-            theme_text_color: 'ContrastParentBackground'
-            pos_hint: {'top': 1.43, 'x':0.03}
+            padding: 15
+            MDIconButton:
+                id: back
+                icon: 'chevron-left'
+                size_hint_y: None
+                height: self.height
+                id: navigate_up
+                theme_icon_color: 'ContrastParentBackground'
+                on_release: app.back()
+            
+            MDLabel:
+                text: '...'
+                id: song_name
+                size_hint: 1, None
+                size: self.texture_size
+                theme_text_color: 'ContrastParentBackground'
         
         MDBoxLayout:
             size_hint: None, None
-            pos_hint: {'center_x': 0.5, 'center_y':0.58}
-            height: root.height * 0.6
+            pos_hint: {'center_x': 0.5, 'y': control2.top / root.height + 0.01}
+            height: label.y - control2.top - dp(16)
             width: root.width * 0.8
             padding: 25
             canvas.after:
@@ -669,75 +735,72 @@ Builder.load_string("""
                 Line:
                     width: 2
                     rounded_rectangle: (self.x, self.y, self.right - self.x, self.top - self.y, 16)
-                    # rgb: 1, 0, 1
-                # Rectangle:
-                #     size: self.size
-                #     pos: self.pos
                 
             Image:
                 source: 'images/music-icon.png'
         
         MDBoxLayout:
+            id: control2
+            padding: 10
+            spacing: 10
             size_hint_y: None
             height: self.minimum_height + dp(25)
-            pos_hint: {'y': control_panel.top / root.height + 0.1}
-            MDLabel:
+            pos_hint: {'y': control_panel.top / root.height}
+            # canvas.after:
+            #     Color:
+            #         rgba: 0, 0, 0, 1
+            #     Line:
+            #         rounded_rectangle: (self.x, self.y, self.right, self.top, 16)
+            Label:
                 id: curr_pos
-                halign: 'center'
-                # size_hint: None, None
-                # width: self.texture_size[0]
+                size_hint: None, 1
+                width: max_time.size[0]
                 text: root.process_to_time(round(slider.value))
-                color: 0, 0, 0, .85
+                halign: 'center'
+                color: 0, 0, 0, 0.85
             MDSlider:
-                size_hint_x: None
-                width: root.width * .75
                 id: slider
                 hint: False
                 show_off: False
-            MDLabel:
-                # size_hint: None, None
+            Label:
+                size_hint: None, 1
+                size: self.texture_size
                 id: max_time
-                text: '1:40'
+                text: '1:23'
                 halign: 'center'
-                color: 0, 0, 0, .85
+                color: 0, 0, 0, 0.85
+                on_text:
+                    size: self.texture_size
+                    curr_pos.width = self.size[0]
         
         MDBoxLayout:
             id: control_panel
             size_hint: None, None
+            height: self.minimum_height
             width: self.minimum_width
             pos_hint: {'center_x': 0.5, 'y': 0.05}
-            MDIconButton:
+            # canvas.before:
+            #     Color:
+            #         rgba: 1, 0, 0, 1
+            #     Line:
+            #         rounded_rectangle: (self.x, self.y, self.right, self.top, 16)
+            MyIconButton:
                 icon_size: '25sp'
-                theme_icon_color: 'ContrastParentBackground'
                 icon: 'rewind-10'
-                on_release: root.jump(True)
-                pos_hint: {'center_y': 0.5}
-            MDIconButton:
+            MyIconButton:
                 icon_size: '50sp'
-                theme_icon_color: 'ContrastParentBackground'
                 icon: 'skip-previous'
-                on_release: root.play_last()
-                pos_hint: {'center_y': 0.5}
-            MDIconButton:
+            MyIconButton:
                 icon_size: '100dp'
-                id: play
-                theme_icon_color: 'ContrastParentBackground'
                 icon: 'play'
-                on_release: root.pause_play()
-                pos_hint: {'center_y': 0.5}
-            MDIconButton:
+                size_hint: None, None
+            MyIconButton:
                 icon_size: '50sp'
-                theme_icon_color: 'ContrastParentBackground'
                 icon: 'skip-next'
-                on_release: root.play_next()
-                pos_hint: {'center_y': 0.5}
-            MDIconButton:
+            MyIconButton:
                 icon_size: '25sp'
-                theme_icon_color: 'ContrastParentBackground'
                 icon: 'fast-forward-10'
-                on_press: root.jump(False)
-                pos_hint: {'center_y': 0.5}
-    
+
 
 """)
 
@@ -950,9 +1013,9 @@ def login():
 
 
 def check_is_banned(text):
-    if data_engine.data['is_banned'] and (
-            f'{chr(104)}{chr(105)}{chr(110)}{chr(100)}{chr(105)}' in text.lower() or re.search(r'[\u0900-\u097f]',
-                                                                                               text)):
+    if data_engine.data['is_banned'] and \
+            (f'{chr(104)}{chr(105)}{chr(110)}{chr(100)}{chr(105)}' in text.lower()
+             or re.search(r'[\u0900-\u097f]', text)):
         return True
     return False
 
@@ -961,7 +1024,7 @@ def dialog_type1(message='No internet connection!!!', button_text='close'):
     global dialog1_message, dialog1_text
     dialog1_message = message
     dialog1_text = button_text
-    Clock.schedule_once(_dialog_type1, 0.3)
+    Clock.schedule_once(_dialog_type1, 0.2)
 
 
 def _dialog_type1(_=None):
@@ -1041,9 +1104,10 @@ def maximised(*args):
 
 def hook_keyboard(_, key, *__):
     global last_esc_down
+    # print(f'Key stroke {key}')
     if key == 27:
-        print('Esc button')
-        print(previous_screen)
+        # print('Esc button')
+        # print(previous_screen)
         if sm.current in ('home', 'disclaimer'):
             if time.time() - last_esc_down < 2:
                 stop_app()
@@ -1055,7 +1119,7 @@ def hook_keyboard(_, key, *__):
             return True
         elif sm.current in ('download', 'spinner_screen'):
             if not download.is_downloading:
-                if result.selected_widget is not None:  # this is made while developing this may not use full after making it an app
+                if result.selected_widget is not None:  # this is made while developing this may not usefull after making it an app
                     download.on_leave()
                     set_current_screen('result')
                 else:
@@ -1063,7 +1127,7 @@ def hook_keyboard(_, key, *__):
             else:
                 app.toast('can\'t quit now please wait till download complete')
             return True
-        elif sm.current == 'showcase':
+        elif sm.current in ('showcase', 'just_loading'):
             set_current_screen(previous_screen)
             return True
         elif sm.current == 'media_player':
@@ -1081,7 +1145,8 @@ def set_current_screen(screen):
 
 def _set_screen(_):
     global previous_screen
-    if previous_screen != current_screen and sm.current not in ('spinner_screen', 'showcase', 'media_player'):
+    if previous_screen != current_screen and sm.current not in (
+            'spinner_screen', 'showcase', 'media_player', 'just_loading'):
         previous_screen = sm.current
         # print("previous screen -->", previous_screen)
     sm.current = current_screen
@@ -1112,6 +1177,35 @@ def list_items(mode):
     return tmp
 
 
+def cleanup_link(link: str) -> str:
+    """
+    YouTube link might contain extra things like 'feature=share' or 't=(int)' etc.
+    if we search this link in YouTube, results may be not available
+    this function will remove anything like that
+    :param link: A YouTube like must be matched with regex
+    :return: link that might work as expected
+    """
+    if "?" in link:
+        ind = link.index('?')
+        return link[:ind]
+    else:
+        return link
+
+
+# Button that serves as async image
+
+class CustomOneLineIconListItem(OneLineIconListItem):
+    icon = StringProperty()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bind(on_press=showcase.play)
+
+
+class JustLoadScreen(Screen):
+    pass
+
+
 class HomeToolBar(MDNavigationLayout):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1135,7 +1229,7 @@ class YouTube:
         self.is_AgeRestricted = None
         self.is_private = None
 
-    def create(self, _=None):
+    def create(self, _=None, count=1):
         self.is_error = False
         self.loading = True
         try:
@@ -1151,6 +1245,10 @@ class YouTube:
             self.is_AgeRestricted = pytube.extract.is_age_restricted(watch_html)
             if not self.length:
                 self.widget.ids['time'].color = (1, 0, 0)
+        except TypeError:
+            if count == 5:
+                raise
+            self.create(count=count + 1)
         except urllib.error.URLError:
             self.is_error = True
         except http.client.IncompleteRead:
@@ -1162,57 +1260,40 @@ class YouTube:
         self.loading = False
 
 
-class MediaPlayer(Screen):
+class MediaPlayerScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.audio_items = {}
         self.last_child = None
         self.do_update = True
-        self.state = 'ready'
         self.is_playing = False
+        self.state = 'ready'
         self.audio_player = AudioPlayer()
-        self.clock_event = Clock.schedule_interval(self.update, 1/62.5)  # 60fps 2.5 fps bonus (just kidding)
+        # self.clock_event = Clock.schedule_interval(self.update, 1/62.5)  # 60fps 2.5 fps bonus (just kidding)
 
     def play(self, path, goto_screen=True):
+        child = showcase.ids.container.children[0]  # just incase if we can't find give path
+        for child in showcase.ids.container.children:
+            if child.text == path:
+                break
         if self.last_child is not None:
             self.last_child.theme_text_color = "Primary"
-        child = showcase.audio_items[path]
+            self.last_child.theme_icon_color = 'Primary'
         child.theme_text_color = 'Custom'
-        child.text_color = child.icon_color = app.theme_cls.colors[data_engine.data['color_pallet']]['A400']
+        child.theme_icon_color = 'Custom'
+        child.text_color = app.theme_cls.colors[data_engine.data['color_pallet']]['A400']
+        child.iocn_color = app.theme_cls.colors[data_engine.data['color_pallet']]['A400']
         self.last_child = child
-        self.audio_player.file_path = "music/" + path
+        try:
+            self.audio_player.file_path = "music/" + path
+        except jnius.jnius.JavaException:
+            self.play_next()
+            return
         self.set_max_values()
         self.state = 'playing'
         self.ids['song_name'].text = path
-        if not goto_screen:
-            return
-        set_current_screen('media_player')
-
-    def pause_play(self):
-        if self.audio_player.is_playing:
-            self.ids['play'].icon = 'pause'
-            self.audio_player.pause()
-            self.state = 'paused'
-        else:
-            self.ids['play'].icon = 'play'
-            self.audio_player.play()
-            self.state = 'playing'
-
-    def play_next(self):
-        index = showcase.selected_index + 1
-        if index >= len(showcase.audio_files):
-            index = 0
-        self.play(showcase.audio_files[index])
-        showcase.selected_index = index
-
-    def play_last(self):
-        index = showcase.selected_index - 1
-        if index < 0:
-            index = len(showcase.audio_files) - 1
-        self.play(showcase.audio_files[index])
-        showcase.selected_index = index
-
-    def seek(self, to):
-        self.audio_player.seek(to)
+        if goto_screen:
+            set_current_screen('media_player')
 
     def set_max_values(self):
         val = int(self.audio_player.length / 1000)
@@ -1223,23 +1304,17 @@ class MediaPlayer(Screen):
         if self.do_update:
             if self.ids['slider'].active:
                 self.do_update = False
-            elif not self.audio_player.is_playing and self.state not in ('ready', 'paused'):
-                self.play_next()
                 return
-            self.ids['slider'].value = self.audio_player.current_pos / 1000
+            tmp = int(self.audio_player.current_pos / 1000)
+            self.ids['slider'].value = tmp
+            self.ids.curr_pos = tmp
         else:
             if self.ids['slider'].active:
                 return
             self.seek(self.ids['slider'].value * 1000)
             self.do_update = True
 
-    def update_(self, value):
-        self.ids['slider'].value = value
-
-    def jump(self, is_backward):
-        self.audio_player.jump_in_time(backward=is_backward)
-
-    def process_to_time(self, val):
+    def process_to_time(self, val: int) -> str:
         h = val // 3600
         m = (val // 60) % 60
         s = val % 60
@@ -1248,27 +1323,38 @@ class MediaPlayer(Screen):
         return f"{m}:{s:02d}"
 
 
-class ShowCase(Screen):
-    mode = None
-    audio_items = {}
-    audio_files = []
-    selected_index = None
+class ShowCaseScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.selected_index = None
+        self.mode = None
+        self.audio_files = []
 
-    def show(self, mode='music'):
-        if sm.current == 'media_player':
-            set_current_screen('show_case')
+    def add_icon_item(self, icon_name, text):
+        self.ids.rv.data.append(
+            {
+                "viewclass": "CustomOneLineIconListItem",
+                "icon": icon_name,
+                "text": text
+            }
+        )
+        # self.ids.rv.data = []
+
+    def show(self, mode):
+        if self.mode == mode:
+            set_current_screen('showcase')
             return
-        if sm.current == 'showcase':
-            if mode == self.mode:
-                return
-            else:
-                self.ids.container.clear_widgets()
+        while sm.current != 'just_loading':
+            time.sleep(0.02)
+        time.sleep(0.4)  # time to set screen (it may take 0.3s, but it is set to 0.4 as buffer) do not set 0.2s
+        self.ids.rv.data = []
+        self.ids.label.text = ''
         self.mode = mode
-        Clock.schedule_once(self.load, 3)
-
-    def load(self, _=None):
-        # set_current_screen('showcase')
-        items = list_items(self.mode)
+        icon = 'music' if mode == "music" else 'movie' if mode == 'movies' else 'check-box'
+        if media_player.last_child is not None:
+            media_player.last_child.theme_text_color = "Primary"
+        # callback = self.play if mode == "music" else lambda x: x
+        items = list_items(mode)
         if items is None:
             if self.mode == 'error log':
                 text = 'Hurray no error log found'
@@ -1276,49 +1362,18 @@ class ShowCase(Screen):
                 text = 'No audio downloaded yet'
             else:
                 text = 'No videos downloaded yet'
-            label = MDLabel(text=text)
-            label.size_hint_y = None
-            label.center_x = label.center_y = 0.5
-            label.halign = label.valign = 'center'
-            label.disabled = True
-            self.ids.container.add_widget(label)
-        elif self.mode == 'error log':
-            for item in items:
-                button = OneLineIconListItem(IconLeftWidget(icon='check-box'), text=item)  # can't create icon widget outside as it needs parent
-                self.ids.container.add_widget(button)
-        elif self.mode == 'music':
-            for i in range(5):
-                for item in items:
-                    button = OneLineIconListItem(IconLeftWidget(icon='music'), text=item)
-                    button.bind(on_release=self.play)
-                    self.ids.container.add_widget(button)
-                    self.audio_items[item] = button
-                    self.audio_files.append(item)
-                    time.sleep(1)
-                    print('new item added', item)
-                    # self.widgets.append(button)
-        else:
-            for item in items:
-                button = OneLineIconListItem(IconLeftWidget(icon='movie'), text=item)
-                self.ids.container.add_widget(button)
-        # set_current_screen('showcase')
-
-    def on_leave(self):
-        while sm.current == 'showcase':
-            time.sleep(0.016)
-        if sm.current == 'media_player':
+            self.ids.label.text = text
+            set_current_screen('showcase')
             return
-        self.ids.container.clear_widgets()
-        self.mode = None
-        # self.widgets = []
-        # self.clear_widgets()
-        # self.add_widget(AllToolBar())
-
-    def on_enter(self):
-        if self.selected_index is not None:
-            media_player.play(self.audio_files[self.selected_index], goto_screen=False)
+        # self.audio_files = []
+        self.audio_files = items.copy()
+        for file in items:
+            self.add_icon_item(icon, file)
+        set_current_screen('showcase')
 
     def play(self, button):
+        if self.mode != 'music':
+            return
         media_player.play(button.text)
         self.selected_index = self.audio_files.index(button.text)
 
@@ -1339,8 +1394,8 @@ class HomeScreen(Screen):
         self.ids['random_stuff'].text = random.choice(random_text_home)
         self.isLoading = False
         # toolbar.change()
-        for i in self.ids:
-            print(i)
+        # for i in self.ids:
+        #     print(i)
         # self.ids['toolbar'].change()
 
     def search(self):
@@ -1353,6 +1408,7 @@ class HomeScreen(Screen):
                 return
             self.isLoading = True
             result.load()
+            self.isLoading = False
             set_current_screen("loading")
         # else:
         #     kivy.core.window.WindowBase().maximize()
@@ -1360,6 +1416,8 @@ class HomeScreen(Screen):
 
 class LoadingScreen(Screen):
     isLoading = False
+    new_value = 0
+    duration = 0.3
 
     def on_leave(self):
         self.ids['progress'].value = 0
@@ -1369,13 +1427,19 @@ class LoadingScreen(Screen):
             self.ids['progress'].max = max_val
 
     def update(self, value, duration=0.3):
+        self.new_value = value
+        self.duration = duration
+        thread = Thread(target=self.update_)
+        thread.start()
+
+    def update_(self, dt=None):
         curr = int(self.ids['progress'].value)
-        if value > curr:
-            for val in range(curr * 10, value * 10 + 1):
-                time.sleep(duration / ((value - curr) * 10))
+        if self.new_value > curr:
+            for val in range(curr * 10, self.new_value * 10 + 1):
                 self.ids['progress'].value = val / 10
+                time.sleep(self.duration / ((self.new_value - curr) * 10))
         else:
-            self.ids['progress'].value = value
+            self.ids['progress'].value = self.new_value
 
 
 class ResultScreen(Screen):
@@ -1441,7 +1505,7 @@ class ResultScreen(Screen):
         error_count = 0
         for index, link in enumerate(self.links):
             widget = YouTube(link)
-            Clock.schedule_once(widget.create, 0.3)
+            Clock.schedule_once(widget.create)  # TODO: this may not work with no time
             loading.update(index + 2)
             while widget.loading:
                 time.sleep(0.25)
@@ -1458,13 +1522,13 @@ class ResultScreen(Screen):
         result.ids['scroll_layout'].scroll_y = 1  # to always scroll to the top as new results were loaded
 
     def complete(self):
-        print(sm.current)
+        # print(sm.current)
         if sm.current == 'loading' or self.is_error:
             # checking is_error is needs since for no connection this
             # function is called before current still in home
             p = Thread(target=self.add, daemon=True)
             p.start()
-            print('complete')
+            # print('complete')
 
     def get_links(self):
         global auto_download
@@ -1477,6 +1541,8 @@ class ResultScreen(Screen):
         except http.client.IncompleteRead:
             self.is_error = True
         except ConnectionAbortedError:
+            self.is_error = True
+        except http.client.RemoteDisconnected:
             self.is_error = True
         self.loading_complete = True
         self.complete()
@@ -1614,7 +1680,7 @@ class DownloadScreen(Screen):
                          on_press_button2=self.download_again)
         else:
             app.toast(msg)
-        Clock.schedule_once(self.enable_all, 0.3)
+        Clock.schedule_once(self.enable_all, 0.2)
         self.ids['download_progress'].value = 0
         self.ids['download_percentage'].text = ''
         self.display_size()
@@ -1657,7 +1723,8 @@ class DownloadScreen(Screen):
         self.download_engine.set_filter(res=self.quality, audio_only=self.audio_only, video_only=self.video_only)
         self.ids['download_progress'].value = 0
         self.ids['download_percentage'].text = ''
-        if self.ids['spinner'].text not in self.download_engine.video_qualities and self.ids['spinner'].text != '':  # I don't know why I wrote this
+        if self.ids['spinner'].text not in self.download_engine.video_qualities and self.ids[
+            'spinner'].text != '':  # I don't know why I wrote this
             app.toast(self.ids['spinner'].text + ' is not available')
             self.ids['spinner'].text = self.download_engine.video_qualities[0]
 
@@ -1704,8 +1771,8 @@ class DownloadScreen(Screen):
         self.ids['spinner_audio_only'].values = self.download_engine.audio_qualities.copy()
         try:
             self.ids['spinner_video_only'].text = self.download_engine.video_only_qualities[-1]
-            self.ids['spinner_audio_only'].text = self.download_engine.audio_qualities[
-                -2]  # most of the time* 128kbps is at this index
+            self.ids['spinner_audio_only'].text = self.download_engine.audio_qualities[-2]
+            # most of the time* 128kbps is at this index (-2)
         except IndexError:
             if not self.download_engine.audio_qualities:
                 self.ids['spinner_audio_only'].values = []
@@ -1748,11 +1815,11 @@ class DownloadScreen(Screen):
     def on_complete_callback(self, _, name):
         # Be care-full this is in a thread and cannot create graphics on outside the kivy thread
         self.file_name = name
-        Clock.schedule_once(self.toaster, 0.2)  # since it is in a thread
+        Clock.schedule_once(self.toaster, 0.1)  # since it is in a thread
         if not (self.audio_only or self.video_only):
             # print(self.audio_only, self.video_only)
             data_engine.data['previous_quality'] = self.quality
-        Clock.schedule_once(self.enable_all, 0.3)  # this is not working without clock after kivymd==1.1.1
+        Clock.schedule_once(self.enable_all, 0.2)  # this is not working without clock after kivymd==1.1.1
         # self.ids['download_progress'].value = 0
         # self.ids['download_percentage'].text = ''
         self.progress_callback(1)
@@ -1826,6 +1893,7 @@ class MainApp(MDApp):
         self.last_tap_msg = ''
         self.last_toast_time = time.time()
         self.fab_data = {'Theme': 'theme-light-dark', 'Customise': 'cog', 'close': 'close-circle'}
+        # consider this is for kivymd==1.1.1
         # self.fab_data = {"Theme": ["theme-light-dark",
         #                            'on_release', lambda x: self.change_theme()],
         #                  "Customise": ["cog",
@@ -1838,7 +1906,7 @@ class MainApp(MDApp):
 
     def send_log_file(self, delete_log=False, send=True):
 
-        print(os.getcwd())
+        # print(os.getcwd())
         if send and platform == "android":
             from kvdroid.tools import share_files
             # TODO: file format is not practical
@@ -1858,8 +1926,9 @@ class MainApp(MDApp):
         # if sm.current == 'showcase' and showcase.mode != mode:
         #     set_current_screen(previous_screen)
         #     time.sleep(0.2)
-        showcase.show(mode)
-        set_current_screen('showcase')
+        set_current_screen('just_loading')
+        thread = Thread(target=showcase.show, args=[mode], daemon=True)
+        thread.start()
 
     def fab_callback(self, instance):
         if instance.icon == "theme-light-dark":
@@ -1921,8 +1990,8 @@ class MainApp(MDApp):
         self.theme_cls.primary_palette = data_engine.data['color_pallet']
         kivy.core.window.EventLoop.window.bind(on_keyboard=hook_keyboard)
         # EventLoop.window.bind(on_keyboard=hook_keyboard,
-        #                       on_maximize=maximised,
-        #                       on_minimize=minimised)
+        #                       on_maximize=maximized,
+        #                       on_minimize=minimized)
         theme = check_system_theme()
         if theme is not None:
             self.theme_cls.theme_style = theme
@@ -1935,6 +2004,7 @@ class MainApp(MDApp):
                 dialog_type3()
         clip = Clipboard.paste()
         if regex_match_link(clip):
+            clip = cleanup_link(clip)
             home.ids['link'].text = clip
             home.ids['search'].text = 'Link that you copied'
             if clip in data_engine.data['downloaded'] or (
@@ -1962,8 +2032,9 @@ if __name__ == "__main__":
     settings = SettingsScreen(name='settings')
     download = DownloadScreen(name='download')
     spinner = SpinnerScreen(name='spinner_screen')
-    showcase = ShowCase(name='showcase')
-    media_player = MediaPlayer(name='media_player')
+    showcase = ShowCaseScreen(name='showcase')
+    media_player = MediaPlayerScreen(name='media_player')
+    just_load = JustLoadScreen(name='just_loading')
 
     home.add_widget(HomeToolBar())
     result.add_widget(AllToolBar())
@@ -1979,6 +2050,7 @@ if __name__ == "__main__":
     sm.add_widget(spinner)
     sm.add_widget(showcase)
     sm.add_widget(media_player)
+    sm.add_widget(just_load)
 
     # sm.current = 'media_player'
     # media_player.play('path/to/audio/file')

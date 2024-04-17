@@ -23,7 +23,7 @@ def new_name(name: str, audio=False):
     print(folder)
     try:
         tmp = name.split('.')
-        format_ = tmp[-1] if audio else 'mp3'
+        format_ = tmp[-1] if not audio else 'mp3'
         print('format -->', format_)
         name = '.'.join(tmp[:-1])
     except Union[KeyError, IndexError]:
@@ -35,8 +35,8 @@ def new_name(name: str, audio=False):
     name_ = name + '.' + format_
     if name_ in lst:
         print('File exists')
-        i = 1
         name = f"{name}(1).{format_}"
+        i = 1  # i set 1 here itself on-purpose
         while name in lst:
             name = name.replace(f"({i})", f"({i + 1})")
             i += 1
@@ -202,12 +202,15 @@ class Downloader:
             # if not (self.includes_audio or self.audio_only):  # De Morgan's law don't confuse (condition is true
             # when both were false) video_stream = self.stream_object self.audio_only = True self.create_object()
             # audio_stream = self.stream_object self.audio_only = False _ffmpeg_downloader(audio_stream=audio_stream,
-            # video_stream=video_stream, target='') else:
+            # video_stream=video_stream, target='')
+            # else:
             old_name = self.stream_object.default_filename
             name, flag = new_name(old_name, self.audio_only)
             if not ignore and flag:
                 self.error('file exists')
                 return
+            if self.audio_only and flag == 0:
+                old_name = name  # old name extension it .mp4 and name have it as .mp3
             if not rename:
                 name = old_name
             print(name, "is new name")

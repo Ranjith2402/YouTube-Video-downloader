@@ -36,3 +36,5 @@ def check_log_file(path=None) -> Union[list, bool]:
     except FileNotFoundError:
         # print('error')
         return False
+    except PermissionError:
+        return False
